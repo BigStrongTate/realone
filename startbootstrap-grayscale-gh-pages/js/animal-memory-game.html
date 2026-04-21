@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Animal Memory Game</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: #1a2e1a;
+      color: #f0ece4;
+      font-family: 'Georgia', serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 400;
+      letter-spacing: 0.1em;
+      color: #a8d878;
+      margin-bottom: 0.2rem;
+    }
+
+    .subtitle {
+      font-size: 0.78rem;
+      letter-spacing: 0.25em;
+      color: #4a6a3a;
+      text-transform: uppercase;
+      margin-bottom: 1.75rem;
+    }
+
+    .stats {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 1.75rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .stat {
+      text-align: center;
+      background: #0f1f0f;
+      border: 1px solid #2a4a1a;
+      border-radius: 10px;
+      padding: 0.6rem 1.25rem;
+      min-width: 90px;
+    }
+
+    .stat-label {
+      font-size: 0.68rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #4a7a3a;
+      margin-bottom: 3px;
+    }
+
+    .stat-val {
+      font-size: 1.5rem;
+      font-weight: 400;
+      color: #a8d878;
+    }
+
+    .controls {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1.75rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+    }
+
+    button {
+      background: transparent;
+      border: 1px solid #3a6a2a;
+      color: #a8d878;
+      font-family: inherit;
+      font-size: 0.85rem;
+      letter-spacing: 0.1em;
+      padding: 0.5rem 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    button:hover { background: #2a4a1a; border-color: #5a8a4a; }
+    button:active { transform: scale(0.97); }
+
+    select {
+      background: #0f1f0f;
+      border: 1px solid #3a6a2a;
+      color: #a8d878;
+      font-family: inherit;
+      font-size: 0.85rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    #board {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    .card {
+      aspect-ratio: 1;
+      perspective: 700px;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      padding: 0;
+    }
+
+    .card-inner {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card.flipped .card-inner,
+    .card.matched .card-inner {
+      transform: rotateY(180deg);
+    }
+
+    .card-face {
+      position: absolute;
+      inset: 0;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+
+    .card-back {
+      background: #0f1f0f;
+      border: 1px solid #2a5a1a;
+    }
+
+    .card-back svg {
+      width: 40%;
+      height: 40%;
+      opacity: 0.3;
+    }
+
+    .card-front {
+      transform: rotateY(180deg);
+      background: #1a3a0a;
+      border: 1px solid #3a7a2a;
+      font-size: clamp(22px, 6vw, 42px);
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .card-front .animal-name {
+      font-size: clamp(8px, 1.8vw, 12px);
+      letter-spacing: 0.1em;
+      color: #6a9a5a;
+      text-transform: uppercase;
+    }
+
+    .card.matched .card-front {
+      background: #1a4a0a;
+      border-color: #5aaa3a;
+    }
+
+    .card.matched .card-front .animal-name {
+      color: #8acb6a;
+    }
+
+    #win-banner {
+      display: none;
+      background: #1a4a0a;
+      border: 1px solid #5aaa3a;
+      border-radius: 12px;
+      padding: 1rem 2rem;
+      margin-bottom: 1.25rem;
+      text-align: center;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    #win-banner p { color: #a8d878; font-size: 1.1rem; }
+    #win-banner .sub { font-size: 0.8rem; color: #5a8a4a; margin-top: 4px; letter-spacing: 0.1em; }
+  </style>
+</head>
+<body>
+
+  <h1>Animal Memory</h1>
+  <p class="subtitle">Find all the matching pairs</p>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">Moves</div>
+      <div class="stat-val" id="s-moves">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Pairs</div>
+      <div class="stat-val" id="s-pairs">0/8</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Time</div>
+      <div class="stat-val" id="s-time">0:00</div>
+    </div>
+  </div>
+
+  <div id="win-banner">
+    <p id="win-text">All animals found!</p>
+    <p class="sub" id="win-sub"></p>
+  </div>
+
+  <div id="board"></div>
+
+  <div class="controls">
+    <button onclick="startGame()">New Game</button>
+    <select id="diff-sel" onchange="startGame()">
+      <option value="8">Easy — 8 pairs (4×4)</option>
+      <option value="10">Medium — 10 pairs (4×5)</option>
+      <option value="12">Hard — 12 pairs (4×6)</option>
+    </select>
+  </div>
+
+  <script>
+    const ANIMALS = [
+      { emoji: '🦁', name: 'Lion' },
+      { emoji: '🐘', name: 'Elephant' },
+      { emoji: '🦊', name: 'Fox' },
+      { emoji: '🐬', name: 'Dolphin' },
+      { emoji: '🦋', name: 'Butterfly' },
+      { emoji: '🐢', name: 'Turtle' },
+      { emoji: '🦜', name: 'Parrot' },
+      { emoji: '🐺', name: 'Wolf' },
+      { emoji: '🦒', name: 'Giraffe' },
+      { emoji: '🐙', name: 'Octopus' },
+      { emoji: '🦩', name: 'Flamingo' },
+      { emoji: '🐻', name: 'Bear' },
+    ];
+
+    let cards = [], flipped = [], matchedCount = 0, moves = 0, locked = false;
+    let timerInt = null, elapsed = 0, started = false;
+
+    function shuffle(arr) {
+      const a = [...arr];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    }
+
+    function fmtTime(s) {
+      return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+    }
+
+    function startGame() {
+      clearInterval(timerInt);
+      elapsed = 0; moves = 0; matchedCount = 0; flipped = []; locked = false; started = false;
+
+      document.getElementById('win-banner').style.display = 'none';
+      document.getElementById('s-moves').textContent = '0';
+      document.getElementById('s-time').textContent = '0:00';
+
+      const n = parseInt(document.getElementById('diff-sel').value);
+      document.getElementById('s-pairs').textContent = '0/' + n;
+
+      const chosen = shuffle(ANIMALS).slice(0, n);
+      cards = shuffle([...chosen, ...chosen].map((a, i) => ({ id: i, ...a })));
+
+      const cols = 4;
+      const board = document.getElementById('board');
+      board.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+      board.innerHTML = '';
+
+      cards.forEach((c, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'card';
+        btn.dataset.idx = i;
+        btn.setAttribute('aria-label', 'Card ' + (i + 1));
+        btn.innerHTML = `
+          <div class="card-inner">
+            <div class="card-face card-back">
+              <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="20" cy="20" r="16" stroke="#5a8a4a" stroke-width="1.5"/>
+                <path d="M14 20 Q20 12 26 20 Q20 28 14 20Z" stroke="#5a8a4a" stroke-width="1.5" fill="none"/>
+              </svg>
+            </div>
+            <div class="card-face card-front">
+              <span>${c.emoji}</span>
+              <span class="animal-name">${c.name}</span>
+            </div>
+          </div>`;
+        btn.onclick = () => flip(i, btn);
+        board.appendChild(btn);
+      });
+    }
+
+    function startTimer() {
+      timerInt = setInterval(() => {
+        elapsed++;
+        document.getElementById('s-time').textContent = fmtTime(elapsed);
+      }, 1000);
+    }
+
+    function flip(idx, el) {
+      if (locked || el.classList.contains('flipped') || el.classList.contains('matched')) return;
+      if (!started) { started = true; startTimer(); }
+
+      el.classList.add('flipped');
+      flipped.push({ idx, el });
+
+      if (flipped.length < 2) return;
+
+      locked = true;
+      moves++;
+      document.getElementById('s-moves').textContent = moves;
+
+      const [a, b] = flipped;
+
+      if (cards[a.idx].name === cards[b.idx].name) {
+        a.el.classList.add('matched'); a.el.classList.remove('flipped');
+        b.el.classList.add('matched'); b.el.classList.remove('flipped');
+        matchedCount++;
+        const total = parseInt(document.getElementById('diff-sel').value);
+        document.getElementById('s-pairs').textContent = matchedCount + '/' + total;
+        flipped = [];
+        locked = false;
+
+        if (matchedCount === total) {
+          clearInterval(timerInt);
+          const banner = document.getElementById('win-banner');
+          document.getElementById('win-text').textContent = 'All ' + total + ' animals found!';
+          document.getElementById('win-sub').textContent = moves + ' moves · ' + fmtTime(elapsed);
+          banner.style.display = 'block';
+        }
+      } else {
+        setTimeout(() => {
+          a.el.classList.remove('flipped');
+          b.el.classList.remove('flipped');
+          flipped = [];
+          locked = false;
+        }, 900);
+      }
+    }
+
+    startGame();
+  </script>
+</body>
+</html>
